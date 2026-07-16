@@ -1,15 +1,16 @@
 import {useMemo, useState} from 'react';
+import {toPng} from 'html-to-image';
 import {Theme} from '@astryxdesign/core/theme';
 import {y2kTheme} from '@astryxdesign/theme-y2k/built';
 import {VStack, HStack} from '@astryxdesign/core/Layout';
 import {Text, Heading} from '@astryxdesign/core/Text';
 import {TextInput} from '@astryxdesign/core/TextInput';
 import {FileInput} from '@astryxdesign/core/FileInput';
+import {Button} from '@astryxdesign/core/Button';
 import {Card} from '@astryxdesign/core/Card';
+import {Divider} from '@astryxdesign/core/Divider';
 
 export default function App() {
-  const [schoolName, setSchoolName] = useState('');
-  const [orgName, setOrgName] = useState('');
   const [studentName, setStudentName] = useState('');
   const [studentId, setStudentId] = useState('');
   const [schoolYear, setSchoolYear] = useState('');
@@ -24,6 +25,20 @@ export default function App() {
   const logoUrl = useMemo(() => (logo ? URL.createObjectURL(logo) : null), [
     logo,
   ]);
+
+  // Chụp thẻ thành ảnh PNG rồi tải về máy.
+  const downloadCard = async () => {
+    const node = document.getElementById('id-card');
+    if (!node) return;
+    const dataUrl = await toPng(node, {pixelRatio: 3, cacheBust: true});
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = 'the-hoc-sinh.png';
+    a.click();
+  };
+
+  const openLink = (url: string) =>
+    window.open(url, '_blank', 'noopener,noreferrer');
 
   return (
     <Theme theme={y2kTheme}>
@@ -45,24 +60,6 @@ export default function App() {
 
           <Card padding={5}>
             <VStack gap={4}>
-              <HStack gap={4} wrap>
-                <div style={{flex: '1 1 220px'}}>
-                  <TextInput
-                    label="Tên trường (dòng to, màu đen)"
-                    placeholder="ASU Preparatory Academy"
-                    value={schoolName}
-                    onChange={setSchoolName}
-                  />
-                </div>
-                <div style={{flex: '1 1 220px'}}>
-                  <TextInput
-                    label="Tên tổ chức (dòng nhỏ, màu đỏ mận)"
-                    placeholder="Arizona State University"
-                    value={orgName}
-                    onChange={setOrgName}
-                  />
-                </div>
-              </HStack>
               <HStack gap={4} wrap>
                 <div style={{flex: '1 1 220px'}}>
                   <TextInput
@@ -107,7 +104,7 @@ export default function App() {
                     value={logo}
                     onChange={files => setLogo(files as File | null)}
                     mode="dropzone"
-                    description="Tải logo (có chữ tên trường sẵn càng tốt) — sẽ thay 2 dòng chữ ở góc, nền trắng tự ẩn."
+                    description="Tải logo trường (nền trắng hoặc trong suốt) — hiện ở góc trên, nền trắng tự ẩn."
                   />
                 </div>
                 <div style={{flex: '1 1 220px'}}>
@@ -126,8 +123,6 @@ export default function App() {
 
           <div style={{display: 'flex', justifyContent: 'center'}}>
             <IdCard
-              schoolName={schoolName || 'Tên trường'}
-              orgName={orgName || 'Tên tổ chức'}
               studentName={studentName || 'Họ và tên'}
               studentId={studentId || '------'}
               schoolYear={schoolYear || '----/----'}
@@ -136,6 +131,37 @@ export default function App() {
               logoUrl={logoUrl}
             />
           </div>
+
+          <HStack gap={3} hAlign="center">
+            <Button
+              label="⬇ Tải thẻ về (PNG)"
+              variant="primary"
+              clickAction={downloadCard}
+            />
+          </HStack>
+
+          <Divider />
+
+          {/* ===== Liên hệ ===== */}
+          <VStack gap={2} style={{alignItems: 'center'}}>
+            <Text type="supporting" color="secondary">
+              Liên hệ
+            </Text>
+            <HStack gap={3} hAlign="center" wrap>
+              <Button
+                label="Facebook"
+                variant="secondary"
+                onClick={() =>
+                  openLink('https://www.facebook.com/thien.phuc.450676/')
+                }
+              />
+              <Button
+                label="Telegram"
+                variant="secondary"
+                onClick={() => openLink('https://t.me/Benedetta24k')}
+              />
+            </HStack>
+          </VStack>
         </VStack>
       </main>
     </Theme>
@@ -143,8 +169,6 @@ export default function App() {
 }
 
 function IdCard({
-  schoolName,
-  orgName,
   studentName,
   studentId,
   schoolYear,
@@ -152,8 +176,6 @@ function IdCard({
   photoUrl,
   logoUrl,
 }: {
-  schoolName: string;
-  orgName: string;
   studentName: string;
   studentId: string;
   schoolYear: string;
@@ -193,6 +215,7 @@ function IdCard({
 
   return (
     <div
+      id="id-card"
       style={{
         position: 'relative',
         width: W,
@@ -264,7 +287,7 @@ function IdCard({
       {/* ===== Logo ảnh (trên-phải) =====
           Đặt TRỰC TIẾP trong thẻ (không lồng trong div khác) để mix-blend-mode
           trộn đúng với nền vàng → nền trắng của logo tự biến mất. */}
-      {logoUrl && (
+      {logoUrl ? (
         <img
           src={logoUrl}
           alt="Logo trường"
@@ -279,62 +302,25 @@ function IdCard({
             zIndex: 0,
           }}
         />
-      )}
-
-      {/* ===== Tên trường (khi CHƯA có logo) ===== */}
-      {!logoUrl && (
+      ) : (
+        // Chưa có logo → hiện ô gợi ý ở góc.
         <div
           style={{
             position: 'absolute',
-            top: 14,
+            top: 18,
             right: 20,
-            maxWidth: 300,
+            width: 180,
+            height: 56,
+            border: `2px dashed ${maroon}`,
+            borderRadius: 8,
+            background: 'rgba(255,255,255,0.35)',
             display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-end',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
-          <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: '50%',
-                border: `2px solid ${maroon}`,
-                background: '#fff',
-                overflow: 'hidden',
-                flexShrink: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <span style={{fontSize: 20, fontWeight: 800, color: maroon}}>
-                {schoolName.trim().charAt(0).toUpperCase() || '?'}
-              </span>
-            </div>
-            <span
-              style={{
-                fontSize: 21,
-                fontWeight: 800,
-                color: '#111',
-                textAlign: 'left',
-                lineHeight: 1.1,
-                maxWidth: 210,
-              }}
-            >
-              {schoolName}
-            </span>
-          </div>
-          <span
-            style={{
-              marginTop: 2,
-              fontSize: 15,
-              fontWeight: 700,
-              color: maroon,
-            }}
-          >
-            {orgName}
+          <span style={{fontSize: 14, fontWeight: 700, color: maroon}}>
+            Logo trường
           </span>
         </div>
       )}
